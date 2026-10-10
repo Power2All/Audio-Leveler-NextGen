@@ -213,6 +213,27 @@ impl Tracker {
     }
 }
 
+/// A fixed-width font family for the console. Slint looks fonts up by family name only, so
+/// the generic "monospace" has to be turned into a real name: on Linux, whatever fontconfig
+/// picks for it.
+fn mono_font() -> String {
+    if cfg!(windows) {
+        return "Consolas".into();
+    }
+    if cfg!(target_os = "macos") {
+        return "Menlo".into();
+    }
+    Command::new("fc-match")
+        .args(["-f", "%{family[0]}", "monospace"])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .filter(|f| !f.is_empty())
+        .unwrap_or_else(|| "DejaVu Sans Mono".into())
+}
+
 /// The CLI next to this executable, or `leveler` on PATH.
 fn cli_path() -> PathBuf {
     let name = if cfg!(windows) { "leveler.exe" } else { "leveler" };
@@ -605,6 +626,7 @@ fn main() -> Result<(), slint::PlatformError> {
         eprintln!("couldn't set the application id: {e}");
     }
     ui.set_version(env!("CARGO_PKG_VERSION").into());
+    ui.set_mono_font(mono_font().into());
     ui.set_format_model(strings(FORMATS.map(|f| f.0)));
     ui.set_bitrate_model(strings(BITRATES));
     ui.set_bit_depth_model(strings(BIT_DEPTHS.map(|b| b.0)));

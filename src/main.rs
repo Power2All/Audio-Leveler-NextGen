@@ -452,6 +452,10 @@ fn collect_jobs(cli: &Cli) -> Result<Vec<Job>> {
                     push_unique(&mut inputs, &mut seen, path);
                 }
             }
+        } else if p.is_file() {
+            // Before the glob check: names like "Side A [Remastered].flac" are real files,
+            // not patterns ("[Remastered]" would match a single letter and find nothing).
+            push_unique(&mut inputs, &mut seen, p.to_path_buf());
         } else if is_glob(pat) {
             for m in glob::glob(pat).with_context(|| format!("bad glob pattern {pat}"))? {
                 let path = m?;
@@ -459,8 +463,6 @@ fn collect_jobs(cli: &Cli) -> Result<Vec<Job>> {
                     push_unique(&mut inputs, &mut seen, path);
                 }
             }
-        } else if p.is_file() {
-            push_unique(&mut inputs, &mut seen, p.to_path_buf());
         } else {
             bail!("input not found: {pat}");
         }

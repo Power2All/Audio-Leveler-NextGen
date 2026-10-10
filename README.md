@@ -138,11 +138,11 @@ down to about 1.3× the glibc build's run time.
 
 Each build levels a test tone into all six output formats as a smoke test. The packages and a
 `SHA256SUMS.txt` then go into a **draft** release named after the version in `Cargo.toml`
-(`v1.0.1`), for you to check and publish. Run it from the Actions tab ("Run workflow"), or push
+(`v1.0.2`), for you to check and publish. Run it from the Actions tab ("Run workflow"), or push
 the matching tag (a tag that doesn't match `Cargo.toml` stops the run):
 
 ```bash
-git tag v1.0.1 && git push origin v1.0.1
+git tag v1.0.2 && git push origin v1.0.2
 ```
 
 Running it again for the same version replaces the files in the existing release. The release
@@ -165,9 +165,11 @@ leveler <INPUT>... -o <DIR> -f <FORMAT> [options]
 ```
 
 `INPUT` can be repeated and can be a file, a directory (every audio file directly inside it), or
-a glob. Quote globs so `leveler` expands them itself. Files are recognised by extension: `flac`,
-`wav`, `wave`, `mp3`, `ogg`, `oga`, `aac`, `m4a`, `mp4`, `aif`, `aiff`, `aifc`, `alac`, `caf`,
-`mka`, `ac3`, `wma`, `opus` (the last few only if Symphonia can actually decode them).
+a glob. Quote globs so `leveler` expands them itself. An existing file or folder is always
+taken as it is, so names like `Side A [Remastered].flac` work without escaping the brackets.
+Files are recognised by extension: `flac`, `wav`, `wave`, `mp3`, `ogg`, `oga`, `aac`, `m4a`,
+`mp4`, `aif`, `aiff`, `aifc`, `alac`, `caf`, `mka`, `ac3`, `wma`, `opus` (the last few only if
+Symphonia can actually decode them).
 
 ```bash
 # Vinyl rips -> MP3 at podcast loudness, trim rumble, remove 50 Hz hum, 8 files at a time
@@ -192,7 +194,7 @@ A short splash on stderr shows the version and the settings for the run, then ev
 a status line as soon as a worker picks it up:
 
 ```
-  Audio Leveler NextGen 1.0.1
+  Audio Leveler NextGen 1.0.2
   ───────────────────────────
   Files    12 → /out
   Output   MP3 320 kbps
@@ -282,7 +284,8 @@ Windows, macOS and Linux (on Linux through the desktop portal, so KDE, GNOME and
 - **Start** converts into the "Save to" folder. A progress bar and status line follow the run,
   each row gets a ✓ or ✗ as it finishes, and **Stop** cancels it.
 - **Console** shows the CLI's own output, starting with the exact `leveler` command the GUI ran.
-  It opens by itself if a conversion fails.
+  It opens by itself if a conversion fails. Select text with the mouse (or Ctrl+A) and copy it
+  with Ctrl+C or the right-click menu.
 
 **Icon and desktop integration.** The app has its own icon (`ui/icon.svg`: meter bars brought
 to an even level inside a target band).

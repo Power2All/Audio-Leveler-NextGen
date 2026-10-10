@@ -217,6 +217,9 @@ export component AppWindow inherits Window {
     background: Palette.background;
 
     in property <string> version;
+    // A fixed-width font for the console, chosen in gui.rs (Slint doesn't resolve the
+    // generic name "monospace").
+    in property <string> mono-font;
     // One compact height for every dropdown and input field in the settings.
     property <length> field-height: 28px;
 
@@ -634,22 +637,41 @@ export component AppWindow inherits Window {
             }
         }
 
-        // Console output
-        log-view := ScrollView {
+        // Console output. A read-only TextInput rather than Text, so the output can be
+        // selected (drag, or Ctrl+A) and copied (Ctrl+C, or the right-click menu).
+        ContextMenuArea {
             visible: root.show-log;
             height: root.show-log ? 180px : 0px;
             vertical-stretch: 0;
-            content-width: self.visible-width;
-            content-height: max(self.visible-height, log-text.preferred-height + 8px);
-            log-text := Text {
-                x: 6px;
-                y: 4px;
-                width: parent.width - 12px;
-                text: root.log;
-                wrap: word-wrap;
-                font-family: "monospace";
-                font-size: 12px;
-                color: Palette.foreground;
+            Menu {
+                MenuItem {
+                    title: "Copy";
+                    activated => { log-text.copy(); }
+                }
+                MenuItem {
+                    title: "Select all";
+                    activated => { log-text.select-all(); }
+                }
+            }
+            log-view := ScrollView {
+                width: parent.width;
+                height: parent.height;
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, log-text.preferred-height + 8px);
+                log-text := TextInput {
+                    x: 6px;
+                    y: 4px;
+                    width: parent.width - 12px;
+                    text: root.log;
+                    read-only: true;
+                    single-line: false;
+                    wrap: word-wrap;
+                    font-family: root.mono-font;
+                    font-size: 12px;
+                    color: Palette.foreground;
+                    selection-background-color: Palette.accent-background;
+                    selection-foreground-color: Palette.accent-foreground;
+                }
             }
         }
     }
