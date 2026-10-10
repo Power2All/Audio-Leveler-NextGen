@@ -19,7 +19,8 @@ description: |
   Own ITU-R BS.1770-4 loudness normalization, adaptive leveler and true-peak limiter, plus
   optional de-hum, noise reduction and high-pass, for batches of FLAC, WAV, MP3, OGG, AAC and
   Opus files. Includes the command-line tool `leveler` and the desktop app `leveler-gui`.
-license: See README (FDK AAC is under Fraunhofer's own licence)
+# The bundled FDK AAC encoder is under Fraunhofer's own licence; see the README.
+license: MIT
 
 # `leveler` is fully static. `leveler-gui` links glibc and loads the font and keyboard
 # libraries; X11 or Wayland libraries are loaded at run time (any desktop has them).
@@ -48,6 +49,9 @@ contents:
     file_info: { mode: 0644 }
   - src: README.md
     dst: /usr/share/doc/audio-leveler-nextgen/README.md
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/doc/audio-leveler-nextgen/LICENSE
     file_info: { mode: 0644 }
 
 # Refresh the menu and icon caches so the launcher and its icon appear right away.

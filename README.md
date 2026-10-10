@@ -398,3 +398,9 @@ true-peak limit → fade → resample → encode`
   (`-j`); a single file uses one core.
 - **Memory:** each file is processed in RAM, a few hundred MB for a long stereo track. Lower
   `-j` for very long files.
+
+## License
+
+[MIT](LICENSE) for this project's own code. The binaries also contain third-party codec
+libraries under their own licences: LAME (LGPL), libvorbis and libopus (BSD-style) and FDK AAC
+(Fraunhofer's licence, see the AAC licensing note under [Per-platform notes](#per-platform-notes)).

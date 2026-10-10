@@ -19,6 +19,7 @@ cp "$cli" "$stage/$app/Contents/MacOS/leveler"
 chmod 755 "$stage/$app/Contents/MacOS/"*
 sed "s/@VERSION@/$version/g" "$here/Info.plist" > "$stage/$app/Contents/Info.plist"
 cp "$here/AppIcon.icns" "$stage/$app/Contents/Resources/AppIcon.icns"
+cp "$here/../../LICENSE" "$stage/$app/Contents/Resources/LICENSE"
 
 # Sign the helper first, then the bundle (which signs its main executable).
 codesign --force --sign - "$stage/$app/Contents/MacOS/leveler"

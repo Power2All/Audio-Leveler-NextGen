@@ -10,4 +10,5 @@ Every package contains both the desktop app (`leveler-gui`) and the command-line
   The command-line tool is inside the app:
   `/Applications/Audio Leveler NextGen.app/Contents/MacOS/leveler`.
 
-The AAC encoder (FDK AAC) is under Fraunhofer's own licence; check it before redistributing.
+Audio Leveler NextGen is under the MIT licence. The bundled AAC encoder (FDK AAC) is under
+Fraunhofer's own licence; check it before redistributing.
