@@ -21,19 +21,28 @@ component Hint inherits Text {
 
 // Tooltip body: wraps long explanations at a readable width instead of one wide line, so it
 // fits on small screens too. Short texts get a box only as wide as they need.
+//
+// Slint puts this inside its own tooltip frame and sizes that frame from this box's min and
+// preferred sizes (a plain width/height doesn't count), and the box then fills the frame. So
+// the size is given as min/preferred, and the corners match the frame's so it stays hidden.
 component TipBox inherits Rectangle {
     in property <styled-text> text;
     property <length> max-text-width: 320px;
-    width: min(root.max-text-width, probe.preferred-width) + 20px;
-    height: body.preferred-height + 14px;
+    property <length> box-width: min(root.max-text-width, probe.preferred-width) + 20px;
+    property <length> box-height: body.preferred-height + 14px;
+    min-width: root.box-width;
+    preferred-width: root.box-width;
+    min-height: root.box-height;
+    preferred-height: root.box-height;
     background: Palette.background;
     border-color: Palette.border;
     border-width: 1px;
-    border-radius: 6px;
-    drop-shadow-blur: 6px;
-    drop-shadow-color: #0000004d;
-    // Unwrapped size of the text, used only to measure it.
+    border-radius: 4px;
+    // Unwrapped size of the text, used only to measure it. The explicit x/y keeps it out of
+    // the box's size, which would otherwise grow to the unwrapped one-line width.
     probe := StyledText {
+        x: 0;
+        y: 0;
         text: root.text;
         visible: false;
     }

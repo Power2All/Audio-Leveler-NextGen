@@ -29,9 +29,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 const APP_NAME: &str = "Audio Leveler NextGen";
-/// "1.0" from Cargo's "1.0.0".
-const APP_VERSION: &str =
-    concat!(env!("CARGO_PKG_VERSION_MAJOR"), ".", env!("CARGO_PKG_VERSION_MINOR"));
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// File extensions we treat as audio input when expanding a directory or a glob.
 const AUDIO_EXTS: &[&str] = &[

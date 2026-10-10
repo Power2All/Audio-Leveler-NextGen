@@ -604,9 +604,7 @@ fn main() -> Result<(), slint::PlatformError> {
     if let Err(e) = slint::set_xdg_app_id("audio-leveler-nextgen") {
         eprintln!("couldn't set the application id: {e}");
     }
-    ui.set_version(
-        concat!(env!("CARGO_PKG_VERSION_MAJOR"), ".", env!("CARGO_PKG_VERSION_MINOR")).into(),
-    );
+    ui.set_version(env!("CARGO_PKG_VERSION").into());
     ui.set_format_model(strings(FORMATS.map(|f| f.0)));
     ui.set_bitrate_model(strings(BITRATES));
     ui.set_bit_depth_model(strings(BIT_DEPTHS.map(|b| b.0)));

@@ -1,6 +1,6 @@
 [package]
 name = "leveler"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 license = "MIT"
 description = "Audio Leveler NextGen: self-contained batch audio leveler (Auphonic-Leveler-style) with EBU R128 loudness normalization, adaptive leveling and true-peak limiting"

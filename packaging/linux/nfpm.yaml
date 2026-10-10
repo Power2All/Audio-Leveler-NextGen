@@ -2,7 +2,7 @@
 # .github/workflows/release.yml. Run from the project root after building:
 #
 #   mkdir -p dist/linux && cp <static leveler> <leveler-gui> dist/linux/
-#   VERSION=1.0.0 nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/    (and -p rpm)
+#   VERSION=1.0.1 nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/    (and -p rpm)
 #
 # Installs both programs to /usr/bin (the GUI finds the CLI next to itself), the launcher and the
 # icon, so the app shows up in the menu with its icon and in "Open with" for audio files.

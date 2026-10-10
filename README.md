@@ -126,11 +126,11 @@ down to about 1.3× the glibc build's run time.
 
 Each build levels a test tone into all six output formats as a smoke test. The packages and a
 `SHA256SUMS.txt` then go into a **draft** release named after the version in `Cargo.toml`
-(`v1.0.0`), for you to check and publish. Run it from the Actions tab ("Run workflow"), or push
+(`v1.0.1`), for you to check and publish. Run it from the Actions tab ("Run workflow"), or push
 the matching tag (a tag that doesn't match `Cargo.toml` stops the run):
 
 ```bash
-git tag v1.0.0 && git push origin v1.0.0
+git tag v1.0.1 && git push origin v1.0.1
 ```
 
 Running it again for the same version replaces the files in the existing release. The release
@@ -180,8 +180,8 @@ A short splash on stderr shows the version and the settings for the run, then ev
 a status line as soon as a worker picks it up:
 
 ```
-  Audio Leveler NextGen 1.0
-  ─────────────────────────
+  Audio Leveler NextGen 1.0.1
+  ───────────────────────────
   Files    12 → /out
   Output   MP3 320 kbps
   Loudness -13 LUFS, true peak ≤ -1 dBTP
