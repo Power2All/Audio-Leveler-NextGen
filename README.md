@@ -56,10 +56,22 @@ They're shorthand for `cargo build --release --bin leveler`, `cargo build --rele
 gui --bin leveler-gui` and `cargo build --release --features gui`. The GUI only builds with the
 `gui` feature, so a plain `cargo build --release` gives you just the CLI.
 
+To install into `~/.cargo/bin` (on your `PATH`), run one of these from the `leveler-rs` folder:
+
+```bash
+cargo install-cli    # only the command-line tool
+cargo install-gui    # only the desktop app
+cargo install-all    # both (what you usually want)
+```
+
+These stand for `cargo install --path .` with the same `--bin`/`--features` as above. A bare
+`cargo install` doesn't work: Cargo needs `--path .` to install from a checkout.
+
+For a CLI that runs on any Linux machine, build it fully static with musl:
+
 ```bash
 cargo build --release --target x86_64-unknown-linux-musl     # fully static CLI, all formats
-cargo install --path . --target x86_64-unknown-linux-musl --bin leveler   # install it to ~/.cargo/bin
-cargo install --path . --features gui --bin leveler-gui                   # install the GUI next to it
+cargo install --path . --target x86_64-unknown-linux-musl --bin leveler   # or install that one
 ```
 
 The GUI runs the `leveler` binary, so install or copy both side by side. It looks next to itself
