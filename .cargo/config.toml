@@ -16,3 +16,8 @@ CMAKE_POLICY_VERSION_MINIMUM = "3.5"
 build-cli = "build --release --bin leveler"
 build-gui = "build --release --features gui --bin leveler-gui"
 build-all = "build --release --features gui"
+# cargo install-cli / install-gui / install-all -> the same, built and copied to ~/.cargo/bin.
+# Run them from the project folder (they install the package in `.`).
+install-cli = "install --path . --bin leveler"
+install-gui = "install --path . --features gui --bin leveler-gui"
+install-all = "install --path . --features gui"
