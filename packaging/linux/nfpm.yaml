@@ -1,0 +1,56 @@
+# .deb and .rpm package description for nfpm (https://nfpm.goreleaser.com), used by
+# .github/workflows/release.yml. Run from the project root after building:
+#
+#   mkdir -p dist/linux && cp <static leveler> <leveler-gui> dist/linux/
+#   VERSION=1.0.0 nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/    (and -p rpm)
+#
+# Installs both programs to /usr/bin (the GUI finds the CLI next to itself), the launcher and the
+# icon, so the app shows up in the menu with its icon and in "Open with" for audio files.
+name: audio-leveler-nextgen
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 1
+section: sound
+priority: optional
+maintainer: Audio Leveler NextGen
+description: |
+  Batch audio leveler with EBU R128 loudness normalization.
+  Own ITU-R BS.1770-4 loudness normalization, adaptive leveler and true-peak limiter, plus
+  optional de-hum, noise reduction and high-pass, for batches of FLAC, WAV, MP3, OGG, AAC and
+  Opus files. Includes the command-line tool `leveler` and the desktop app `leveler-gui`.
+license: See README (FDK AAC is under Fraunhofer's own licence)
+
+# `leveler` is fully static. `leveler-gui` links glibc and loads the font and keyboard
+# libraries; X11 or Wayland libraries are loaded at run time (any desktop has them).
+depends:
+  - libc6 (>= 2.35)
+  - libfontconfig1
+  - libxkbcommon0
+overrides:
+  rpm:
+    depends:
+      - fontconfig
+      - libxkbcommon
+
+contents:
+  - src: dist/linux/leveler
+    dst: /usr/bin/leveler
+    file_info: { mode: 0755 }
+  - src: dist/linux/leveler-gui
+    dst: /usr/bin/leveler-gui
+    file_info: { mode: 0755 }
+  - src: packaging/linux/audio-leveler-nextgen.desktop
+    dst: /usr/share/applications/audio-leveler-nextgen.desktop
+    file_info: { mode: 0644 }
+  - src: ui/icon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/AudioLevelerNextGen.svg
+    file_info: { mode: 0644 }
+  - src: README.md
+    dst: /usr/share/doc/audio-leveler-nextgen/README.md
+    file_info: { mode: 0644 }
+
+# Refresh the menu and icon caches so the launcher and its icon appear right away.
+scripts:
+  postinstall: packaging/linux/postinstall.sh
+  postremove: packaging/linux/postinstall.sh

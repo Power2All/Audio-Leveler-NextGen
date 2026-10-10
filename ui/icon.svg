@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Audio Leveler NextGen: uneven meter bars brought to an even level inside the target
+       band. Five thick bars so it still reads at 16-32 px. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DDE3FF"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#shine)"/>
+
+  <!-- target band -->
+  <rect x="22" y="86" width="212" height="84" rx="10" fill="#FFFFFF" fill-opacity="0.12"/>
+  <line x1="24" y1="86" x2="232" y2="86" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="24" y1="170" x2="232" y2="170" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- meter bars: two uneven, one easing in, two levelled to the band -->
+  <g fill="url(#bar)">
+    <rect x="34"  y="40"  width="28" height="176" rx="14"/>
+    <rect x="76"  y="104" width="28" height="48"  rx="14"/>
+    <rect x="118" y="62"  width="28" height="132" rx="14"/>
+    <rect x="160" y="86"  width="28" height="84"  rx="14"/>
+    <rect x="202" y="86"  width="28" height="84"  rx="14"/>
+  </g>
+</svg>

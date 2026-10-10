@@ -1,0 +1,69 @@
+[package]
+name = "leveler"
+version = "1.0.0"
+edition = "2021"
+description = "Audio Leveler NextGen: self-contained batch audio leveler (Auphonic-Leveler-style) with EBU R128 loudness normalization, adaptive leveling and true-peak limiting"
+
+[[bin]]
+name = "leveler"
+path = "src/main.rs"
+
+# Desktop front-end. Only built with `--features gui`; it runs the `leveler` binary.
+[[bin]]
+name = "leveler-gui"
+path = "src/gui.rs"
+required-features = ["gui"]
+
+[dependencies]
+anyhow = "1.0.95"
+clap = { version = "4.5.23", features = ["derive"] }
+glob = "0.3.2"
+
+# Decode (pure Rust): FLAC, WAV/AIFF, MP3, OGG Vorbis, AAC/ALAC, etc.
+symphonia = { version = "0.5.4", features = ["all"] }
+# Pure-Rust DSP
+rustfft = "6.2.0"
+rubato = "0.16.1"
+# Lossless encoders — pure Rust, build everywhere.
+hound = "3.5.1"
+flacenc = "0.5.0"
+# Lossy encoders — vendored C, statically compiled in. Optional so a pure-Rust,
+# trivially-static, no-C-toolchain build (FLAC/WAV only) is possible via
+# `--no-default-features`.
+mp3lame-encoder = { version = "0.2.1", optional = true }
+vorbis_rs = { version = "0.5.5", optional = true }
+fdk-aac = { version = "0.7.0", optional = true }
+audiopus = { version = "0.3.0-rc.0", optional = true }
+# Force libopus to be built from its vendored source and linked statically (on Linux/glibc
+# it would otherwise link the system libopus.so). Building it needs cmake.
+audiopus_sys = { version = "0.2.2", features = ["static"], optional = true }
+ogg = { version = "0.9.1", optional = true }
+lofty = "0.22"
+# GUI only (feature `gui`).
+# `unstable-winit-030` gives access to the winit window, used to bring the window forward.
+slint = { version = "1.18.1", optional = true, features = ["unstable-winit-030"] }
+rfd = { version = "0.17.2", optional = true }
+serde_json = { version = "1.0.151", optional = true }
+
+# musl's malloc is slow under multithreaded load; mimalloc (C, statically compiled in)
+# fixes that for the static Linux build. glibc builds keep the system allocator.
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = "0.1.43"
+
+[features]
+default = ["lossy"]
+# MP3 / OGG Vorbis / AAC / Opus output (requires a C compiler at build time).
+lossy = ["dep:mp3lame-encoder", "dep:vorbis_rs", "dep:fdk-aac", "dep:audiopus", "dep:audiopus_sys", "dep:ogg"]
+# The `leveler-gui` desktop app (Slint). Off by default so the CLI build stays lean and static.
+gui = ["dep:slint", "dep:slint-build", "dep:rfd", "dep:serde_json"]
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"
+
+[build-dependencies]
+slint-build = { version = "1.18.1", optional = true }
+winresource = "0.1"

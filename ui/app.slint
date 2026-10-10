@@ -1,0 +1,647 @@
+// Audio Leveler NextGen — desktop front-end layout.
+// The Fluent style (set in build.rs) follows the OS dark/light setting on Windows, macOS
+// and Linux (via the XDG desktop portal); every colour below comes from `Palette`.
+// The choice lists and the table rows are filled from src/gui.rs, which also owns what each
+// index means.
+
+import { Button, CheckBox, ComboBox, GroupBox, LineEdit, ListView, ProgressIndicator, ScrollView,
+         SpinBox, Switch, HorizontalBox, VerticalBox, GridBox, Palette } from "std-widgets.slint";
+
+component Label inherits Text {
+    color: Palette.foreground;
+    vertical-alignment: center;
+}
+
+component Hint inherits Text {
+    color: Palette.foreground;
+    opacity: 0.6;
+    font-size: 11px;
+    vertical-alignment: center;
+}
+
+// Tooltip body: wraps long explanations at a readable width instead of one wide line, so it
+// fits on small screens too. Short texts get a box only as wide as they need.
+component TipBox inherits Rectangle {
+    in property <styled-text> text;
+    property <length> max-text-width: 320px;
+    width: min(root.max-text-width, probe.preferred-width) + 20px;
+    height: body.preferred-height + 14px;
+    background: Palette.background;
+    border-color: Palette.border;
+    border-width: 1px;
+    border-radius: 6px;
+    drop-shadow-blur: 6px;
+    drop-shadow-color: #0000004d;
+    // Unwrapped size of the text, used only to measure it.
+    probe := StyledText {
+        text: root.text;
+        visible: false;
+    }
+    body := StyledText {
+        x: 10px;
+        y: 7px;
+        width: root.width - 20px;
+        text: root.text;
+        default-color: Palette.foreground;
+    }
+}
+
+// A setting's name; hovering it shows what the setting does (and, for fields you type
+// into, what you can enter).
+component Setting inherits Rectangle {
+    in property <string> text;
+    in property <styled-text> tip;
+    HorizontalLayout {
+        Text {
+            text: root.text;
+            color: Palette.foreground;
+            vertical-alignment: center;
+        }
+    }
+    Tooltip {
+        TipBox { text: root.tip; }
+    }
+}
+
+// A checkbox setting with the same hover explanation. The tooltip only watches the pointer,
+// so clicks still reach the checkbox.
+component SettingCheck inherits Rectangle {
+    in property <string> text;
+    in property <styled-text> tip;
+    in property <bool> enabled: true;
+    in-out property <bool> checked;
+    HorizontalLayout {
+        CheckBox {
+            text: root.text;
+            checked <=> root.checked;
+            enabled: root.enabled;
+        }
+    }
+    Tooltip {
+        TipBox { text: root.tip; }
+    }
+}
+
+component Cell inherits Text {
+    vertical-alignment: center;
+    overflow: elide;
+}
+
+// The file table. Slint's StandardTableView draws every other row's text in a paler
+// "secondary" colour, which is hard to read in light mode. This one keeps all text in the
+// theme's foreground colour and marks alternate rows with a faint stripe instead; the
+// translucent grey reads as a light tint on both light and dark backgrounds.
+component FileTable inherits Rectangle {
+    in property <[[StandardListViewItem]]> rows;
+    in-out property <int> current-row: -1;
+
+    // Column widths; the file name takes the rest. Cells 3..7 are numbers, right-aligned.
+    property <length> w-mark: 22px;
+    property <length> w-format: 130px;
+    property <length> w-time: 56px;
+    property <length> w-lufs: 64px;
+    property <length> w-peak: 84px;
+    property <length> w-lra: 52px;
+    property <length> w-max: 84px;
+    property <length> gap: 14px;
+    // Right padding: room for the vertical scrollbar (14px wide at most, when hovered) plus a
+    // margin, so it never covers the last column. Header and rows share it to stay aligned.
+    // (Fixed rather than only-while-scrolling: making it depend on the list's size is a
+    // layout binding loop.)
+    property <length> pad-right: 26px;
+    property <length> row-height: 30px;
+
+    border-width: 1px;
+    border-color: keys.has-focus ? Palette.accent-background : Palette.border;
+    border-radius: 4px;
+    clip: true;
+
+    // Scroll so row `i` is fully visible.
+    function reveal(i: int) {
+        if (i * root.row-height + list.content-y < 0px) {
+            list.content-y = -i * root.row-height;
+        } else if ((i + 1) * root.row-height + list.content-y > list.visible-height) {
+            list.content-y = list.visible-height - (i + 1) * root.row-height;
+        }
+    }
+
+    // Up/Down move the selection, like the stock table did.
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (root.rows.length == 0) {
+                return reject;
+            }
+            if (event.text == Key.UpArrow) {
+                root.current-row = max(0, root.current-row - 1);
+                root.reveal(root.current-row);
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                root.current-row = min(root.rows.length - 1, root.current-row + 1);
+                root.reveal(root.current-row);
+                return accept;
+            }
+            reject
+        }
+
+        VerticalLayout {
+            padding: 1px;
+
+            HorizontalLayout {
+                height: 32px;
+                padding-left: 10px;
+                padding-right: root.pad-right;
+                spacing: root.gap;
+                Cell { width: root.w-mark; }
+                Cell { text: "File"; horizontal-stretch: 1; font-weight: 600; color: Palette.foreground; }
+                Cell { text: "Format"; width: root.w-format; font-weight: 600; color: Palette.foreground; }
+                Cell { text: "Time"; width: root.w-time; font-weight: 600; color: Palette.foreground; horizontal-alignment: right; }
+                Cell { text: "LUFS"; width: root.w-lufs; font-weight: 600; color: Palette.foreground; horizontal-alignment: right; }
+                Cell { text: "Peak dBTP"; width: root.w-peak; font-weight: 600; color: Palette.foreground; horizontal-alignment: right; }
+                Cell { text: "LRA"; width: root.w-lra; font-weight: 600; color: Palette.foreground; horizontal-alignment: right; }
+                Cell { text: "Max LUFS"; width: root.w-max; font-weight: 600; color: Palette.foreground; horizontal-alignment: right; }
+            }
+            Rectangle {
+                height: 1px;
+                background: Palette.border;
+            }
+
+            list := ListView {
+                for row[idx] in root.rows: line := Rectangle {
+                    property <bool> selected: idx == root.current-row;
+                    property <brush> fg: self.selected ? Palette.selection-foreground : Palette.foreground;
+                    height: root.row-height;
+                    background: self.selected ? Palette.selection-background
+                        : touch.has-hover ? #80808026
+                        : mod(idx, 2) == 1 ? #80808014 : transparent;
+
+                    touch := TouchArea {
+                        clicked => {
+                            root.current-row = idx;
+                            keys.focus();
+                        }
+                    }
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: root.pad-right;
+                        spacing: root.gap;
+                        Cell { width: root.w-mark; text: row[0].text; color: line.fg; horizontal-alignment: center; }
+                        Cell { horizontal-stretch: 1; text: row[1].text; color: line.fg; }
+                        Cell { width: root.w-format; text: row[2].text; color: line.fg; }
+                        Cell { width: root.w-time; text: row[3].text; color: line.fg; horizontal-alignment: right; }
+                        Cell { width: root.w-lufs; text: row[4].text; color: line.fg; horizontal-alignment: right; }
+                        Cell { width: root.w-peak; text: row[5].text; color: line.fg; horizontal-alignment: right; }
+                        Cell { width: root.w-lra; text: row[6].text; color: line.fg; horizontal-alignment: right; }
+                        Cell { width: root.w-max; text: row[7].text; color: line.fg; horizontal-alignment: right; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Audio Leveler NextGen " + root.version;
+    icon: @image-url("icon.svg");
+    preferred-width: 1080px;
+    preferred-height: 720px;
+    background: Palette.background;
+
+    in property <string> version;
+    // One compact height for every dropdown and input field in the settings.
+    property <length> field-height: 28px;
+
+    // File table: one row per file, cells in the column order below. `paths` holds the
+    // full path for each row (same order); the table only shows the file name.
+    in property <[[StandardListViewItem]]> files;
+    in property <[string]> paths;
+    in-out property <int> selected-file: -1;
+    in-out property <string> output-dir;
+
+    // Choice lists (filled from Rust)
+    in property <[string]> format-model;
+    in property <[string]> bitrate-model;
+    in property <[string]> bit-depth-model;
+    in property <[string]> sample-rate-model;
+    in property <[string]> preset-model;
+    in property <[string]> leveler-model;
+    in property <[string]> dehum-model;
+    in property <[string]> denoise-model;
+
+    // Settings (indices into the lists above)
+    in-out property <int> format-index: 0;
+    in-out property <int> bitrate-index: 4;
+    in-out property <int> bit-depth-index: 0;
+    in-out property <int> sample-rate-index: 0;
+    in-out property <bool> mono;
+    in-out property <int> preset-index: 1;
+    in-out property <string> lufs: "-16";
+    in-out property <string> true-peak: "-1";
+    in-out property <bool> ungated;
+    in-out property <bool> normalize: true;
+    in-out property <int> leveler-index: 2;
+    in-out property <string> highpass: "0";
+    in-out property <int> dehum-index: 0;
+    in-out property <int> denoise-index: 0;
+    in-out property <string> fade: "0";
+    in-out property <int> jobs: 0;
+    in-out property <bool> overwrite;
+    in-out property <bool> stats;
+    // True for the lossy formats (MP3/OGG/AAC/Opus), which take a bitrate instead of a bit depth.
+    in property <bool> lossy-format;
+
+    // Run state
+    in property <bool> running;
+    in property <float> progress;
+    in property <bool> progress-known;
+    in property <string> status: "Add files to begin.";
+    in property <string> log;
+    in-out property <bool> show-log;
+
+    callback add-files();
+    callback add-folder();
+    callback remove-selected();
+    callback clear-files();
+    callback browse-output();
+    callback format-chosen(int);
+    callback preset-chosen(int);
+    callback start(/* scan only */ bool);
+    callback stop();
+    callback scroll-log-to-end();
+    callback reset-settings();
+
+    scroll-log-to-end() => {
+        log-view.content-y = min(0px, log-view.visible-height - log-view.content-height);
+    }
+
+    VerticalBox {
+        spacing: 8px;
+
+        // Header
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                text: "Audio Leveler NextGen";
+                font-size: 18px;
+                font-weight: 700;
+                color: Palette.foreground;
+                vertical-alignment: bottom;
+            }
+            Text {
+                text: "v" + root.version;
+                color: Palette.foreground;
+                opacity: 0.6;
+                vertical-alignment: bottom;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Button {
+                text: "Reset settings";
+                enabled: !root.running;
+                clicked => { root.reset-settings(); }
+            }
+        }
+
+        // Files
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 160px;
+            FileTable {
+                width: parent.width;
+                height: parent.height;
+                rows: root.files;
+                current-row <=> root.selected-file;
+            }
+            if root.files.length == 0: Text {
+                width: parent.width;
+                height: parent.height;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                text: "No files yet. Use “Add files…” or “Add folder…” below.";
+                color: Palette.foreground;
+                opacity: 0.5;
+            }
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            Button {
+                text: "Add files…";
+                enabled: !root.running;
+                clicked => { root.add-files(); }
+            }
+            Button {
+                text: "Add folder…";
+                enabled: !root.running;
+                clicked => { root.add-folder(); }
+            }
+            Button {
+                text: "Remove";
+                enabled: !root.running && root.selected-file >= 0;
+                clicked => { root.remove-selected(); }
+            }
+            Button {
+                text: "Clear";
+                enabled: !root.running && root.files.length > 0;
+                clicked => { root.clear-files(); }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Label { text: root.files.length == 1 ? "1 file" : root.files.length + " files"; }
+        }
+
+        // Settings
+        HorizontalLayout {
+            spacing: 8px;
+            vertical-stretch: 0;
+
+            GroupBox {
+                title: "Output";
+                horizontal-stretch: 1;
+                GridBox {
+                    padding: 0px;
+                    spacing: 6px;
+                    Row {
+                        Setting { text: "Format"; tip: @markdown("File type to write. **FLAC** and **WAV** are lossless (an exact copy of the leveled audio); **MP3**, **OGG Vorbis**, **AAC** and **Opus** are smaller lossy files."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.format-model;
+                            current-index <=> root.format-index;
+                            enabled: !root.running;
+                            selected => { root.format-chosen(self.current-index); }
+                        }
+                    }
+                    Row {
+                        Setting {
+                            text: root.lossy-format ? "Bitrate" : "Bit depth";
+                            tip: root.lossy-format
+                                ? @markdown("Size and quality of lossy files, in kbit/s. 256k to 320k sounds transparent for most music; lower values save space. MP3 uses the nearest standard LAME bitrate.")
+                                : @markdown("Sample precision of FLAC and WAV files. **16-bit** is CD quality; **24-bit** keeps more detail (good for vinyl rips). **32-bit float** is for WAV; FLAC writes 24-bit instead.");
+                        }
+                        if root.lossy-format: ComboBox {
+                            height: root.field-height;
+                            model: root.bitrate-model;
+                            current-index <=> root.bitrate-index;
+                            enabled: !root.running;
+                        }
+                        if !root.lossy-format: ComboBox {
+                            height: root.field-height;
+                            model: root.bit-depth-model;
+                            current-index <=> root.bit-depth-index;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Setting { text: "Sample rate"; tip: @markdown("Resample the output. **Same as source** keeps each file’s own rate. Opus only supports 48, 24 and 16 kHz from this list; other choices become 48 kHz for Opus."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.sample-rate-model;
+                            current-index <=> root.sample-rate-index;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Label { text: ""; }
+                        SettingCheck {
+                            text: "Mono";
+                            checked <=> root.mono;
+                            enabled: !root.running;
+                            tip: @markdown("Mixes both channels into one. Leave off for normal stereo music.");
+                        }
+                    }
+                    // Spare height goes below the fields, not above them.
+                    Row { Rectangle { vertical-stretch: 1; } }
+                }
+            }
+
+            GroupBox {
+                title: "Loudness";
+                horizontal-stretch: 1;
+                GridBox {
+                    padding: 0px;
+                    spacing: 6px;
+                    Row {
+                        Setting { text: "Preset"; tip: @markdown("Fills in **Target LUFS** and **Peak dBTP** with a common standard. Typing in either field switches this to **Custom**."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.preset-model;
+                            current-index <=> root.preset-index;
+                            enabled: !root.running;
+                            selected => { root.preset-chosen(self.current-index); }
+                        }
+                    }
+                    Row {
+                        Setting { text: "Target LUFS"; tip: @markdown("The loudness every file is brought to (integrated, EBU R128). Closer to 0 is louder.\n\n**Allowed:** a number, usually between −31 and −9, e.g. −16 (podcasts), −14 (streaming) or −23 (broadcast). Ignored when Normalize is off."); }
+                        LineEdit {
+                            height: root.field-height;
+                            text <=> root.lufs;
+                            input-type: decimal;
+                            enabled: !root.running && root.normalize;
+                            edited => { root.preset-index = 0; }
+                        }
+                    }
+                    Row {
+                        Setting { text: "Peak dBTP"; tip: @markdown("The highest true peak allowed; the limiter keeps every file at or below it.\n\n**Allowed:** a number of 0 or less, e.g. −1 (common) or −2 (ATSC broadcast)."); }
+                        LineEdit {
+                            height: root.field-height;
+                            text <=> root.true-peak;
+                            input-type: decimal;
+                            enabled: !root.running;
+                            edited => { root.preset-index = 0; }
+                        }
+                    }
+                    Row {
+                        Label { text: ""; }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            SettingCheck {
+                            text: "Normalize";
+                            checked <=> root.normalize;
+                            enabled: !root.running;
+                            tip: @markdown("Brings each file to the target loudness. When off, only leveling and cleanup are applied and each file keeps its overall level.");
+                        }
+                            SettingCheck {
+                            text: "Ungated";
+                            checked <=> root.ungated;
+                            enabled: !root.running;
+                            tip: @markdown("Measures loudness without the relative gate, the ATSC A/85 way. Leave off for the usual EBU R128 measurement.");
+                        }
+                        }
+                    }
+                    // Spare height goes below the fields, not above them.
+                    Row { Rectangle { vertical-stretch: 1; } }
+                }
+            }
+
+            GroupBox {
+                title: "Processing";
+                horizontal-stretch: 1;
+                GridBox {
+                    padding: 0px;
+                    spacing: 6px;
+                    Row {
+                        Setting { text: "Leveler"; tip: @markdown("Evens out loud and quiet passages within a track. **Low** is gentle, **High** pulls hardest (up to ±15 dB). **Off** keeps the track’s own dynamics."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.leveler-model;
+                            current-index <=> root.leveler-index;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Setting { text: "Denoise"; tip: @markdown("Reduces steady hiss and background noise. **Auto** picks an amount from the measured noise floor; **Low**, **Medium**, **High** and **Complete** remove about 6, 12, 24 and 60 dB. Strong settings can make the sound dull."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.denoise-model;
+                            current-index <=> root.denoise-index;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Setting { text: "De-hum"; tip: @markdown("Removes mains hum and its harmonics. Use **50 Hz** in Europe, Asia, Africa and Australia, **60 Hz** in the Americas."); }
+                        ComboBox {
+                            height: root.field-height;
+                            model: root.dehum-model;
+                            current-index <=> root.dehum-index;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Setting { text: "High-pass Hz"; tip: @markdown("Cuts everything below this frequency, such as turntable rumble.\n\n**Allowed:** a number in Hz; 0 or empty = off. 20 to 30 removes rumble without touching the music."); }
+                        LineEdit {
+                            height: root.field-height;
+                            text <=> root.highpass;
+                            input-type: decimal;
+                            placeholder-text: "0 = off";
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Setting { text: "Fade s"; tip: @markdown("Fades each file in at the start and out at the end over this many seconds.\n\n**Allowed:** a number of 0 or more, decimals allowed (e.g. 1.5); 0 or empty = off."); }
+                        LineEdit {
+                            height: root.field-height;
+                            text <=> root.fade;
+                            input-type: decimal;
+                            placeholder-text: "0 = off";
+                            enabled: !root.running;
+                        }
+                    }
+                    // Spare height goes below the fields, not above them.
+                    Row { Rectangle { vertical-stretch: 1; } }
+                }
+            }
+
+            GroupBox {
+                title: "Options";
+                horizontal-stretch: 1;
+                GridBox {
+                    padding: 0px;
+                    spacing: 6px;
+                    Row {
+                        Setting { text: "Parallel"; tip: @markdown("How many files are processed at the same time.\n\n**Allowed:** 0 to 256; 0 = one per CPU core. Lower it for very long recordings: each file in progress needs a few hundred MB of memory."); }
+                        SpinBox {
+                            height: root.field-height;
+                            value <=> root.jobs;
+                            minimum: 0;
+                            maximum: 256;
+                            enabled: !root.running;
+                        }
+                    }
+                    Row {
+                        Label { text: ""; }
+                        Hint { text: "0 = one per CPU core"; }
+                    }
+                    Row {
+                        Label { text: ""; }
+                        SettingCheck {
+                            text: "Overwrite existing";
+                            checked <=> root.overwrite;
+                            enabled: !root.running;
+                            tip: @markdown("Replaces output files that already exist. When off, those files are skipped.");
+                        }
+                    }
+                    Row {
+                        Label { text: ""; }
+                        SettingCheck {
+                            text: "Write stats (.json)";
+                            checked <=> root.stats;
+                            enabled: !root.running;
+                            tip: @markdown("Also writes a .stats.json file next to each output with the loudness and true peak before and after.");
+                        }
+                    }
+                    // Spare height goes below the fields, not above them.
+                    Row { Rectangle { vertical-stretch: 1; } }
+                }
+            }
+        }
+
+        // Output folder, actions and progress
+        HorizontalLayout {
+            spacing: 6px;
+            vertical-stretch: 0;
+            Setting { text: "Save to"; tip: @markdown("The folder the leveled files are written to; it’s created if it doesn’t exist. Each file keeps its name with the new extension.\n\n**Allowed:** any folder path, or use Browse…"); }
+            LineEdit {
+                horizontal-stretch: 1;
+                text <=> root.output-dir;
+                placeholder-text: "Output folder for the leveled files";
+                enabled: !root.running;
+            }
+            Button {
+                text: "Browse…";
+                enabled: !root.running;
+                clicked => { root.browse-output(); }
+            }
+            Rectangle { width: 12px; }
+            Button {
+                text: "Scan";
+                enabled: !root.running && root.files.length > 0;
+                clicked => { root.start(true); }
+            }
+            Button {
+                text: "Start";
+                primary: true;
+                enabled: !root.running && root.files.length > 0;
+                clicked => { root.start(false); }
+            }
+            Button {
+                text: "Stop";
+                enabled: root.running;
+                clicked => { root.stop(); }
+            }
+        }
+        HorizontalLayout {
+            spacing: 10px;
+            vertical-stretch: 0;
+            ProgressIndicator {
+                width: 220px;
+                progress: root.progress;
+                indeterminate: root.running && !root.progress-known;
+            }
+            Label {
+                horizontal-stretch: 1;
+                text: root.status;
+                overflow: elide;
+            }
+            Switch {
+                text: "Console";
+                checked <=> root.show-log;
+            }
+        }
+
+        // Console output
+        log-view := ScrollView {
+            visible: root.show-log;
+            height: root.show-log ? 180px : 0px;
+            vertical-stretch: 0;
+            content-width: self.visible-width;
+            content-height: max(self.visible-height, log-text.preferred-height + 8px);
+            log-text := Text {
+                x: 6px;
+                y: 4px;
+                width: parent.width - 12px;
+                text: root.log;
+                wrap: word-wrap;
+                font-family: "monospace";
+                font-size: 12px;
+                color: Palette.foreground;
+            }
+        }
+    }
+}

@@ -1,0 +1,188 @@
+# Builds the CLI (`leveler`) and the desktop app (`leveler-gui`) and packages them as:
+#   Linux    .deb and .rpm (static CLI + desktop app, launcher and icon)
+#   macOS    .dmg with "Audio Leveler NextGen.app" (universal: Apple Silicon + Intel; unsigned)
+#   Windows  .zip with leveler.exe and leveler-gui.exe
+# then collects them into a draft GitHub release named after the version in Cargo.toml
+# ("v1.0.0"). Publish the draft by hand once it looks right.
+#
+# Runs by hand from the Actions tab ("Run workflow"), or when a tag is pushed; the tag must
+# match Cargo.toml (`git tag v1.0.0 && git push origin v1.0.0`).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  # Build into ./target in the checkout, whatever cargo config is around.
+  CARGO_TARGET_DIR: ${{ github.workspace }}/target
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match Cargo.toml version $version (expected v$version)"
+            exit 1
+          fi
+
+  linux:
+    name: Linux (.deb, .rpm)
+    needs: version
+    # 22.04 keeps the desktop app's glibc requirement low (2.35: Ubuntu 22.04, Debian 12+,
+    # Fedora 36+). Switch to ubuntu-24.04 if GitHub retires 22.04.
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5   # for nfpm, which builds the .deb and .rpm
+        with:
+          go-version: stable
+          cache: false
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          # musl-tools: musl-gcc for the static CLI. The rest: Slint's fonts and windowing.
+          sudo apt-get install -y --no-install-recommends musl-tools cmake \
+            libfontconfig1-dev libfreetype-dev libxkbcommon-dev libwayland-dev
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build CLI (static)
+        run: cargo build --release --locked --target x86_64-unknown-linux-musl --bin leveler
+      - name: Build GUI
+        run: cargo build --release --locked --features gui --bin leveler-gui
+      - name: Smoke test
+        run: sh packaging/smoke-test.sh target/x86_64-unknown-linux-musl/release/leveler
+      - name: Package
+        run: |
+          mkdir -p dist/linux
+          cp target/x86_64-unknown-linux-musl/release/leveler target/release/leveler-gui dist/linux/
+          nfpm package -f packaging/linux/nfpm.yaml -p deb -t dist/
+          nfpm package -f packaging/linux/nfpm.yaml -p rpm -t dist/
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            dist/*.deb
+            dist/*.rpm
+          if-no-files-found: error
+
+  macos:
+    name: macOS (.dmg)
+    needs: version
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Install CMake
+        run: command -v cmake || brew install cmake
+      # One build per architecture, merged into universal binaries with lipo.
+      - name: Build (Apple Silicon)
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin --bin leveler
+          cargo build --release --locked --features gui --target aarch64-apple-darwin --bin leveler-gui
+      - name: Build (Intel)
+        run: |
+          cargo build --release --locked --target x86_64-apple-darwin --bin leveler
+          cargo build --release --locked --features gui --target x86_64-apple-darwin --bin leveler-gui
+      - name: Smoke test (Apple Silicon)
+        run: sh packaging/smoke-test.sh target/aarch64-apple-darwin/release/leveler
+      - name: Package
+        run: |
+          mkdir -p dist/universal
+          for b in leveler leveler-gui; do
+            lipo -create -output "dist/universal/$b" \
+              "target/aarch64-apple-darwin/release/$b" "target/x86_64-apple-darwin/release/$b"
+          done
+          lipo -info dist/universal/*
+          sh packaging/macos/make-dmg.sh "$VERSION" dist/universal/leveler dist/universal/leveler-gui \
+            "dist/AudioLevelerNextGen-$VERSION-macos-universal.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  windows:
+    name: Windows (.zip)
+    needs: version
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      # Link the C runtime statically, so the .exe files don't need the Visual C++
+      # redistributable. cc and cmake build the C libraries with /MT to match.
+      RUSTFLAGS: -C target-feature=+crt-static
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build CLI
+        run: cargo build --release --locked --bin leveler
+      - name: Build GUI
+        run: cargo build --release --locked --features gui --bin leveler-gui
+      - name: Smoke test
+        run: sh packaging/smoke-test.sh target/release/leveler.exe
+      - name: Package
+        run: |
+          name="AudioLevelerNextGen-$VERSION-windows-x64"
+          mkdir -p "dist/$name"
+          cp target/release/leveler.exe target/release/leveler-gui.exe README.md "dist/$name/"
+          (cd dist && 7z a -tzip "$name.zip" "$name" >/dev/null)
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    needs: [version, linux, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.version.outputs.version }}
+        run: |
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ls -l dist
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # This version has a release already (e.g. a re-run): replace its files.
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --draft --title "$TAG" --target "$GITHUB_SHA" \
+              --notes-file .github/release-notes.md
+          fi

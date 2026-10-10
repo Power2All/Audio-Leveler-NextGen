@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Audio Leveler NextGen
+GenericName=Audio Leveler
+Comment=Level the loudness of batches of audio files
+Exec=leveler-gui %F
+# Icon name without dashes on purpose: icon themes fall back by trimming dash-separated parts,
+# so a name like "audio-leveler-nextgen" ends up as the theme's generic "audio" icon.
+Icon=AudioLevelerNextGen
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=loudness;LUFS;normalize;leveler;audio;
+MimeType=audio/flac;audio/x-flac;audio/wav;audio/x-wav;audio/mpeg;audio/ogg;audio/x-vorbis+ogg;audio/aac;audio/mp4;audio/x-m4a;audio/aiff;audio/x-aiff;
+StartupWMClass=audio-leveler-nextgen

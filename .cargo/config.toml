@@ -1,0 +1,18 @@
+# Project-wide build settings. Machine-specific ones (such as a target-dir) belong in a
+# .cargo/config.toml in a parent folder or in ~/.cargo/config.toml, not here.
+
+[env]
+# Build libopus from the vendored source and link it statically instead of picking up
+# the system libopus.so through pkg-config (audiopus_sys does that on Linux otherwise).
+LIBOPUS_NO_PKG = "1"
+LIBOPUS_STATIC = "1"
+# The vendored Opus CMakeLists asks for CMake 3.1, which CMake >= 4.0 refuses.
+CMAKE_POLICY_VERSION_MINIMUM = "3.5"
+
+[alias]
+# cargo build-cli  -> only the command-line tool (`leveler`)
+# cargo build-gui  -> only the desktop app (`leveler-gui`; it runs `leveler`, so build that too)
+# cargo build-all  -> both
+build-cli = "build --release --bin leveler"
+build-gui = "build --release --features gui --bin leveler-gui"
+build-all = "build --release --features gui"
